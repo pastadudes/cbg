@@ -1,5 +1,7 @@
 use crate::Error;
 use tetrio_api::models::users::summaries::tetra_league::LeagueSummary;
+use tetrio_api::models::users::user_rank::UserRank;
+use tetrio_api::models::users::user_role::UserRole;
 use tetrio_api::{
     http::clients::reqwest_client::InMemoryReqwestClient,
     models::{packet::Packet, users::user_info::UserInfo},
@@ -17,9 +19,16 @@ pub struct TetrioUser {
     /// it's NOT truncated so it will be very long
     pub xp: f64,
     /// user role (`String` is temp until i stop being lazy and make an enum)
-    pub role: String,
+    pub role: UserRole,
     /// league data
     pub league: Option<LeagueSummary>,
+    /// tetrio rank (example: X+)
+    pub rank: Option<UserRank>,
+    /// avatar revision (useful for getting someones avatar)
+    /// consider using the avatar field instead...
+    pub avatar_revision: Option<i64>,
+    /// user pfp
+    pub avatar: Option<Vec<u8>>,
 }
 
 impl TetrioUser {
@@ -31,18 +40,21 @@ impl TetrioUser {
     pub async fn fetch(username: &str) -> Result<Self, Error> {
         let client = InMemoryReqwestClient::default();
 
-        // Fetch user info
+        // fetch user info
         let user_packet: Packet<UserInfo> = client
             .fetch_user_info(username)
             .await
-            .map_err(|e| format!("Failed to fetch user info: {}", e))?;
+            .map_err(|e| format!("failed to fetch user info: {}", e))?;
 
         let mut user = Self::from_packet(user_packet)?;
 
-        // Try to fetch league data if not already included
+        // try to fetch league data if not already included
         if user.league.is_none() {
             user.league = Self::fetch_league(&user.id).await.ok();
         }
+
+        user.rank = user.league.as_ref().and_then(|league| league.rank.clone());
+        user.avatar = Some(user.get_avatar().await?);
 
         Ok(user)
     }
@@ -77,8 +89,11 @@ impl TetrioUser {
                 username: data.username,
                 id: data.id,
                 xp: data.xp,
-                role: format!("{:?}", data.role),
+                role: data.role,
                 league: None, // we'll fetch this separately
+                rank: None,   // unfinished?
+                avatar_revision: data.avatar_revision,
+                avatar: None,
             }),
             Packet { error, .. } => {
                 if let Some(err) = error {
@@ -114,22 +129,27 @@ impl TetrioUser {
     /// }
     /// ```
     #[cfg(feature = "discord")]
-    pub fn to_embed(&self) -> serenity::all::CreateEmbed {
+    pub async fn to_embed(&self) -> serenity::all::CreateEmbed {
+        use crate::AverageColor;
+
         let mut embed = serenity::all::CreateEmbed::new()
-            .title(&self.username)
+            .author(
+                serenity::all::CreateEmbedAuthor::new(&self.username)
+                    .icon_url(self.get_avatar_url()),
+            )
+            .color(
+                AverageColor::from_image_url(self.get_avatar_url().as_str())
+                    .await
+                    .unwrap_or(AverageColor::new(0, 0, 0))
+                    .to_embed_color(),
+            )
             .field("id", &self.id, false)
             .field("xp", format!("{} XP", self.xp), false)
             .field("level", self.level().to_string(), true)
-            .field("role", &self.role, false);
+            // .field("role", &self.role.into(), false)
+            .field("rank:", self.rank_label(), false);
 
         if let Some(league) = &self.league {
-            // handle league rank
-            let rank_display = match &league.rank {
-                Some(user_rank) => format!("{:?}", user_rank),
-                None => "???".to_string(),
-            };
-            embed = embed.field("league rank", rank_display, true);
-
             // handle TR (Tetra Rating)
             let tr_display = match league.tr {
                 Some(tr_value) => {
@@ -169,10 +189,64 @@ impl TetrioUser {
 
         embed
     }
+
+    // unfinished
+    /// may work
+    pub fn rank_label(&self) -> &'static str {
+        match self.rank {
+            Some(UserRank::XPlus) => "X+",
+            Some(UserRank::X) => "X",
+            Some(UserRank::U) => "U",
+            Some(UserRank::SS) => "SS",
+            Some(UserRank::SPlus) => "S+",
+            Some(UserRank::S) => "S",
+            Some(UserRank::SMinus) => "S-",
+            Some(UserRank::APlus) => "A+",
+            Some(UserRank::A) => "A",
+            Some(UserRank::AMinus) => "A-",
+            Some(UserRank::BPlus) => "B+",
+            Some(UserRank::B) => "B",
+            Some(UserRank::BMinus) => "B-",
+            Some(UserRank::CPlus) => "C+",
+            Some(UserRank::C) => "C",
+            Some(UserRank::CMinus) => "C-",
+            Some(UserRank::DPlus) => "D+",
+            Some(UserRank::D) => "D",
+            Some(UserRank::Z) => "Unranked",
+            Some(UserRank::Unknown(_)) => "???",
+            None => "???",
+        }
+    }
+
+    /// get raw image data of a user's avatar
+    /// NOT TESTED! USE AT YOUR OWN RISK!
+    pub async fn get_avatar(&self) -> Result<Vec<u8>, Error> {
+        let client = reqwest::ClientBuilder::new()
+            .user_agent(std::env::var("USER_AGENT")?)
+            .build()?;
+        Ok(client
+            .get(self.get_avatar_url())
+            .send()
+            .await?
+            .bytes()
+            .await?
+            .to_vec())
+    }
+
+    /// says it in the namo bro
+    pub fn get_avatar_url(&self) -> String {
+        format!(
+            "https://tetr.io/user-content/avatars/{}.jpg?rv={}",
+            self.id,
+            self.avatar_revision.unwrap_or(1) // too risky to panic if avatar revision doesn't exist
+        )
+    }
 }
 
-/// Use this struct for fetching server activity  
-/// You can also use it to make a chart (KINDA similar to the one on ch.tetr.io)
+// pub struct TetrioLeaderboard {}
+
+/// use this struct for fetching server activity  
+/// you can also use it to make a chart (KINDA similar to the one on ch.tetr.io)
 /// Examples:
 /// ```
 /// // sorry but i was too lazy so i just used my bot, however its pretty easy to deduce
@@ -237,7 +311,7 @@ impl TetrioActivity {
     /// let image_bytes = TetrioActivity::fetch().await?.create_chart()?;
     /// // no idea what comes next bro :sob:
     /// ```
-    /// # errors
+    /// # errors:
     /// - errors out when you modify this method
     /// - failure to read the docs (bro i told you to use `TetrioActivity::fetch()` not whatever this is: `TetrioActivity::new().fetch()`)
     /// - a random bit switch
@@ -251,7 +325,11 @@ impl TetrioActivity {
         const BYTES_PER_PIXEL: usize = 3;
 
         // 1. raw RGB buffer (plotters wants &mut [u8])
-        let mut raw = vec![0u8; (W * H) as usize * BYTES_PER_PIXEL];
+        let size = (W as usize)
+            .checked_mul(H as usize)
+            .and_then(|s| s.checked_mul(BYTES_PER_PIXEL))
+            .ok_or("image size too large")?;
+        let mut raw = vec![0u8; size];
 
         {
             // 2. draw into that raw buffer (probably)

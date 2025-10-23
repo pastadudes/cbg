@@ -17,16 +17,13 @@
 use std::sync::Arc;
 
 use cbg_core::osu::OsuClient;
-use cbg_core::tetrio::{TetrioActivity, TetrioUser};
 use cbg_core::{AverageColor, imageops::*};
 use chrono::{DateTime, Utc};
 use poise::serenity_prelude as serenity;
-use tetrio_api::http::parameters::leaderboard_query::LeaderboardType;
-use tetrio_api::http::parameters::value_bound_query::*;
-use tetrio_api::models::users::user_rank::UserRank;
-use tetrio_api::{http::clients::reqwest_client::InMemoryReqwestClient, models::packet::Packet};
 use tokio::time::{Duration, Instant, sleep_until};
+
 mod osu;
+mod tetrio;
 
 pub struct Data {
     // who knows i might add more user data here
@@ -116,9 +113,7 @@ async fn register(ctx: Context<'_>) -> Result<(), Error> {
 /// HELP!!! well uh it also tracks edits. you can use -help `command` to get more info about a command
 #[poise::command(slash_command, track_edits, prefix_command)]
 async fn help(ctx: Context<'_>, command: Option<String>) -> Result<(), Error> {
-    let config = poise::builtins::HelpConfiguration {
-        ..Default::default()
-    };
+    let config = poise::builtins::HelpConfiguration::default();
     poise::builtins::help(ctx, command.as_deref(), config).await?;
     Ok(())
 }
@@ -151,7 +146,6 @@ async fn user(
         .avatar_url()
         .unwrap_or_else(|| user.default_avatar_url());
 
-    // HACK: i mean it works and i think its the only way to get author icon url
     let author = serenity::CreateEmbedAuthor::new(&user.name).icon_url(
         user.avatar_url()
             .unwrap_or_else(|| user.default_avatar_url()),
@@ -192,7 +186,6 @@ async fn call(ctx: Context<'_>) -> Result<(), Error> {
 /// Ping pong! not the game tho it just tells you if the bot is responsive (IN TIME)
 #[poise::command(prefix_command, slash_command, aliases("p"))]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
-    // TODO: uhh add error handling
     let before_timestamp = ctx.created_at();
 
     // send an initial reply and get a handle to it
@@ -232,7 +225,6 @@ async fn imageop(
     if !img
         .content_type
         .as_ref()
-        // FIX: use is_some_and
         .is_some_and(|ct| ct.starts_with("image/"))
     {
         ctx.say("please provide a valid image file!").await?;
@@ -286,142 +278,22 @@ async fn ipv4(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// tetrio related commands, DO NOT USE STANDALONE!! YOU MUST SPECIFY A SUBCOMMAND!!
-#[poise::command(
-    prefix_command,
-    slash_command,
-    subcommands(
-        "tetrio_user",
-        // "records",
-        // "league",
-        // "stats",
-        "activity",
-        "leaderboard"
-    ),
-    aliases("pentrio")
-)]
-async fn tetrio(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("you forgot the subcommand...").await?;
-    Ok(())
-}
-
-#[poise::command(prefix_command, slash_command, rename = "user")]
-async fn tetrio_user(ctx: Context<'_>, username: String) -> Result<(), Error> {
-    let embed = TetrioUser::fetch(&username).await?.to_embed();
+/// shows 5 job listings from arbeitnow.com
+#[poise::command(slash_command, prefix_command, aliases("j*bs"), owners_only)]
+async fn jobs(ctx: Context<'_>) -> Result<(), Error> {
+    let embed = cbg_core::jobs::JobListings::fetch()
+        .await?
+        .take(5)
+        .to_embed();
     ctx.send(poise::CreateReply::default().embed(embed).reply(true))
         .await?;
     Ok(())
 }
 
-/// Shows general activity of tetrio
-#[poise::command(slash_command, prefix_command, broadcast_typing)]
-async fn activity(ctx: Context<'_>) -> Result<(), Error> {
-    let attachment = TetrioActivity::fetch().await?.create_chart()?;
-    ctx.send(
-        poise::CreateReply::default().attachment(serenity::CreateAttachment::bytes(
-            attachment,
-            "tetrio_activity.png",
-        )),
-    )
-    .await?;
-    Ok(())
-}
-
-/// returns an embed of the top 20 players in tetra league
-#[poise::command(prefix_command, slash_command)]
-async fn leaderboard(ctx: Context<'_>) -> Result<(), Error> {
-    let client = &InMemoryReqwestClient::default();
-    let tetrio_leaderboard = client
-        .fetch_leaderboard(
-            LeaderboardType::League,
-            ValueBoundQuery::NotBound {
-                limit: None,
-                country: None,
-            },
-            None,
-        )
-        .await?;
-
-    match tetrio_leaderboard {
-        Packet {
-            data: Some(data), ..
-        } => {
-            // Build an embed with the top N entries
-            let mut embed = serenity::CreateEmbed::default()
-                .title("tetrio leaderboard")
-                .color(serenity::colours::branding::GREEN);
-
-            for (i, entry) in data.entries.iter().enumerate().take(20) {
-                embed = embed.field(
-                    format!("#{} {}", i + 1, entry.username),
-                    format!(
-                        "tr: {:.2} | rank: {} | country: {}",
-                        entry.league.tr,
-                        rank_label(entry.league.rank.as_ref()),
-                        entry.country.clone().unwrap_or_else(|| "??".into())
-                    ),
-                    false,
-                );
-            }
-
-            ctx.send(poise::CreateReply::default().embed(embed)).await?;
-            return Ok(());
-        }
-        Packet { error, .. } => {
-            ctx.say(format!("error fetching leaderboard! {:?}", error))
-                .await?;
-            return Ok(());
-        }
-    }
-}
-
-fn rank_label(rank: Option<&UserRank>) -> &'static str {
-    match rank {
-        Some(UserRank::XPlus) => "X+",
-        Some(UserRank::X) => "X",
-        Some(UserRank::U) => "U",
-        Some(UserRank::SS) => "SS",
-        Some(UserRank::SPlus) => "S+",
-        Some(UserRank::S) => "S",
-        Some(UserRank::SMinus) => "S-",
-        Some(UserRank::APlus) => "A+",
-        Some(UserRank::A) => "A",
-        Some(UserRank::AMinus) => "A-",
-        Some(UserRank::BPlus) => "B+",
-        Some(UserRank::B) => "B",
-        Some(UserRank::BMinus) => "B-",
-        Some(UserRank::CPlus) => "C+",
-        Some(UserRank::C) => "C",
-        Some(UserRank::CMinus) => "C-",
-        Some(UserRank::DPlus) => "D+",
-        Some(UserRank::D) => "D",
-        Some(UserRank::Z) => "Unranked",
-        Some(UserRank::Unknown(_)) => "???",
-        None => "???",
-    }
-}
-
-async fn create_job_embed() -> Result<serenity::CreateEmbed, Error> {
-    use cbg_core::jobs::JobListings;
-    let listings = JobListings::fetch().await?.take(5);
-    Ok(listings.to_embed())
-}
-
-/// shows 5 job listings from arbeitnow.com
-#[poise::command(slash_command, prefix_command, aliases("j*bs"), owners_only)]
-async fn jobs(ctx: Context<'_>) -> Result<(), Error> {
-    let embed = create_job_embed().await?;
-    let builder = poise::CreateReply::default().embed(embed).reply(true);
-    ctx.send(builder).await?;
-    Ok(())
-}
-
 #[poise::command(slash_command, prefix_command)]
 async fn invite(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply(format!(
-        "invite me pls: https://discord.com/oauth2/authorize?client_id=734193707741347851"
-    ))
-    .await?;
+    ctx.reply("invite me pls: https://discord.com/oauth2/authorize?client_id=734193707741347851")
+        .await?;
     Ok(())
 }
 
@@ -447,7 +319,7 @@ async fn main() {
                 source(),
                 imageop(),
                 ipv4(),
-                tetrio(),
+                tetrio::tetrio(),
                 jobs(),
                 invite(),
                 crate::osu::osu(),

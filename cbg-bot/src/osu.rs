@@ -39,6 +39,27 @@ async fn user(
         None => ("???".to_string(), "unknown rank...".to_string()),
     };
 
+    let pp = match user.pp {
+        Some(pp) => {
+            if (1.0..=5.0).contains(&pp) {
+                format!("{pp} (noob)")
+            } else {
+                pp.to_string()
+            }
+        }
+        None => "no pp found!".to_string(),
+    };
+
+    let play_count = match user.play_count {
+        Some(play_count) => format!("{play_count} times"),
+        None => "this user hasn't played any beatmaps!".to_string(),
+    };
+
+    let accuracy = match user.accuracy {
+        Some(accuracy) => format!("{accuracy}%"),
+        None => "no accuracy!".to_string(),
+    };
+
     let embed = serenity::CreateEmbed::default()
         .author(serenity::CreateEmbedAuthor::new(&user.username).icon_url(&user.avatar_url))
         .color(
@@ -48,14 +69,14 @@ async fn user(
         )
         .field("user:", user.username, false)
         .field("country code:", user.country_code, false)
-        .field("pp:", format!("{} pp", user.pp), false)
+        .field("pp:", pp, false)
         .field(
             "global rank:",
             format!("#{global_rank_str} ({})", rank_digits),
             false,
         )
-        .field("play count:", user.play_count.to_string(), false)
-        .field("accuracy:", format!("{}%", user.accuracy), false);
+        .field("play count:", play_count, false)
+        .field("accuracy:", accuracy, false);
 
     ctx.send(poise::CreateReply::default().embed(embed).reply(true))
         .await?;
@@ -154,7 +175,7 @@ async fn score(
 
     for (index, score) in scores.iter().enumerate() {
         let beatmap_info = if let Some(beatmap_id) = score.beatmap_id {
-            match osu.get_beatmap(beatmap_id as u32).await {
+            match osu.get_beatmap(beatmap_id).await {
                 Ok(beatmap) => {
                     format!(
                         "{} - {} [{}]",

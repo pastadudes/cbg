@@ -57,13 +57,18 @@ pub struct JobListings {
 impl JobListings {
     pub async fn fetch() -> Result<Self, Error> {
         let client = reqwest::ClientBuilder::new()
-            .user_agent("contact@pastaya.net if im being too spammy")
+            .user_agent(std::env::var("USER_AGENT")?)
             .build()?;
         let response = client
             .get("https://arbeitnow.com/api/job-board-api")
             .send()
             .await?;
         let api_response: JobApiResponse = response.json().await?;
+
+        // let cache = Cache::builder()
+        //     .max_capacity(10000)
+        //     .time_to_live(tokio::time::Duration::from_secs(3600))
+        //     .build();
 
         Ok(Self {
             jobs: api_response.data.into_iter().map(Job::from).collect(),

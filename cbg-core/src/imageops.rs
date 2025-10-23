@@ -98,7 +98,6 @@ impl ImageProcessor {
     ///      .process()
     ///    .await?;
     /// ```
-
     pub async fn process(self) -> Result<Vec<u8>, Error> {
         if self.operations.is_identity() {
             return Err("no operations specified".into());
@@ -113,13 +112,11 @@ impl ImageProcessor {
         .await??;
 
         // Convert to PNG bytes
-        Ok(
-            tokio::task::spawn_blocking(move || -> Result<Vec<u8>, Error> {
+        tokio::task::spawn_blocking(move || -> Result<Vec<u8>, Error> {
                 let mut bytes = Vec::new();
                 processed_image.write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)?;
                 Ok(bytes)
             })
-            .await??,
-        )
+            .await?
     }
 }
