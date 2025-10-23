@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::fmt::Pointer;
 use std::sync::Arc;
 
 use cbg_core::osu::OsuClient;
@@ -361,12 +362,20 @@ async fn main() {
             },
             ..Default::default()
         })
-        .setup(|_ctx, _ready, _framework| {
+        .setup(|ctx, ready, _framework| {
             Box::pin(async move {
                 // let swears = Data::load("swears.json").await?;
                 // Ok(Data {
                 //     swears: Arc::new(Mutex::new(swears)),
                 // })
+                println!("logged in as {}!", ready.user.name);
+
+                // TODO: maybe make it a env variable?
+                ctx.set_presence(
+                    Some(serenity::ActivityData::watching("you goon")),
+                    serenity::OnlineStatus::Online,
+                );
+
                 Ok(Data {
                     start_time: Instant::now(),
                     osu_client: OsuClient::from_env().await?.into(),
