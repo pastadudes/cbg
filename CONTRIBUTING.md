@@ -3,7 +3,7 @@
 ay man thank you for trying to contribute to my repo  
 before opening a pr, PLEASE keep the same coding style as me
 
-> tlsr: fully qualified paths, 4-space indent, ~100 char lines, one thing per line, no abbreviations, ? over match, minimal imports, and inline values instead of assigning then returning (just don’t include a semicolon).
+> tldr: fully qualified paths, 4-space indent, ~100 char lines, one thing per line, no abbreviations, ? over match, minimal imports, and inline values instead of assigning then returning (just don’t include a semicolon).
 
 ## style: 
 
