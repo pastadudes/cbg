@@ -14,13 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::fmt::Pointer;
-use std::sync::Arc;
-
 use cbg_core::osu::OsuClient;
 use cbg_core::{AverageColor, imageops::*};
 use chrono::{DateTime, Utc};
 use poise::serenity_prelude as serenity;
+use std::sync::Arc;
 use tokio::time::{Duration, Instant, sleep_until};
 
 mod osu;
@@ -28,8 +26,10 @@ mod tetrio;
 
 pub struct Data {
     // who knows i might add more user data here
-    start_time: Instant,
-    osu_client: Arc<OsuClient>,
+    pub start_time: Instant,
+    pub osu_client: Arc<OsuClient>,
+    pub activity_message: String,
+    pub activity_status: String,
 }
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -39,7 +39,9 @@ pub type Context<'a> = poise::Context<'a, Data, Error>;
 /// also watch out theres a 0.000000001454% chance of a mutated pi
 #[poise::command(slash_command, prefix_command)]
 async fn pi(ctx: Context<'_>) -> Result<(), Error> {
-    let pi = cbg_core::pi().await;
+    use rand::prelude::*;
+    let mut rng = StdRng::from_os_rng();
+    let pi = cbg_core::fun::pi(&mut rng);
 
     ctx.reply(format!("pi is: {pi}")).await?;
     Ok(())
@@ -86,16 +88,16 @@ async fn age(
     ctx: Context<'_>,
     #[description = "Selected user"] user: Option<serenity::User>,
 ) -> Result<(), Error> {
-    let u = user.as_ref().unwrap_or_else(|| ctx.author());
+    let user = user.as_ref().unwrap_or_else(|| ctx.author());
 
     // convert Timestamp -> chrono::DateTime<Utc>
-    let datetime: DateTime<Utc> = u.created_at().to_utc();
+    let datetime: DateTime<Utc> = user.created_at().to_utc();
 
     let timestamp = datetime.timestamp();
 
     let response = format!(
         "{}'s account was created at {} (<t:{}:R>)",
-        u.name, datetime, timestamp
+        user.name, datetime, timestamp
     );
 
     ctx.reply(response).await?;
@@ -204,7 +206,7 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 
     let latency = after - before;
 
-    let response_content = format!("Pong! Latency: `{}ms`", latency.num_milliseconds());
+    let response_content = format!("pong! latency: `{}ms`", latency.num_milliseconds());
 
     let builder = poise::CreateReply::default().content(response_content);
 
@@ -269,11 +271,12 @@ async fn source(ctx: Context<'_>) -> Result<(), Error> {
 /// Get a random ip address
 #[poise::command(prefix_command, slash_command)]
 async fn ipv4(ctx: Context<'_>) -> Result<(), Error> {
-    let ip = cbg_core::get_random_ipv4().await;
+    use rand::prelude::*;
+    let mut rng = StdRng::from_os_rng();
+    let ip = cbg_core::fun::get_random_ipv4(&mut rng);
 
     ctx.reply(format!(
-        "heres a vaild ip address (may not be online): {}",
-        ip
+        "heres a vaild ip address (may not be online): {ip}",
     ))
     .await?;
     Ok(())
@@ -305,6 +308,19 @@ async fn main() {
     let intents =
         serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
+    let config = config::Config::builder()
+        .add_source(config::File::with_name("discord.toml")) // since cbg isn't really gonna be tied to discord we don't use "config.toml"
+        .build()
+        .unwrap();
+
+    let activity_message: String = config
+        .get("activity.message")
+        .unwrap_or_else(|_| "default message".to_string());
+
+    let activity_status: String = config
+        .get("activity.status")
+        .unwrap_or_else(|_| "watching".to_string());
+
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![
@@ -329,7 +345,7 @@ async fn main() {
                 prefix: Some("-".into()),
                 ..Default::default()
             },
-            event_handler: |_ctx, _event, _framework, _data| {
+            event_handler: |ctx, _event, _framework, data| {
                 Box::pin(async move {
                     // if let serenity::FullEvent::Message { new_message } = event {
                     //     if new_message.author.bot || new_message.content.starts_with("-") {
@@ -357,6 +373,13 @@ async fn main() {
                     //         }
                     //     }
                     // }
+                    let activity = match data.activity_status.as_str() {
+                        "watching" => serenity::ActivityData::watching(&data.activity_message),
+                        "playing" => serenity::ActivityData::playing(&data.activity_message),
+                        _ => serenity::ActivityData::watching("default message"),
+                    };
+                    // TODO: make onlinestatus customizable
+                    ctx.set_presence(Some(activity), serenity::OnlineStatus::Online);
                     Ok(())
                 })
             },
@@ -370,16 +393,22 @@ async fn main() {
                 // })
                 println!("logged in as {}!", ready.user.name);
 
-                // TODO: maybe make it a env variable?
-                ctx.set_presence(
-                    Some(serenity::ActivityData::watching("you goon")),
-                    serenity::OnlineStatus::Online,
-                );
-
-                Ok(Data {
+                let data = Data {
                     start_time: Instant::now(),
                     osu_client: OsuClient::from_env().await?.into(),
-                })
+                    activity_message: activity_message,
+                    activity_status: activity_status,
+                };
+
+                let activity = match data.activity_status.as_str() {
+                    "watching" => serenity::ActivityData::watching(&data.activity_message),
+                    "playing" => serenity::ActivityData::playing(&data.activity_message),
+                    _ => serenity::ActivityData::watching("default message"),
+                };
+                // TODO: make onlinestatus customizable
+                ctx.set_presence(Some(activity), serenity::OnlineStatus::Online);
+
+                Ok(data)
             })
         })
         .build();
