@@ -6,7 +6,7 @@ use poise::{command, serenity_prelude as serenity};
 #[command(
     prefix_command,
     slash_command,
-    user_cooldown = 1
+    user_cooldown = 1,
     subcommands("user", "score", "beatmap", "rank")
 )]
 pub async fn osu(ctx: Context<'_>) -> Result<(), Error> {
