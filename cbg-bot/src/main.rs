@@ -37,7 +37,7 @@ pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 /// 15 decimal pi.  
 /// also watch out theres a 0.000000001454% chance of a mutated pi
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, user_cooldown = 1)]
 async fn pi(ctx: Context<'_>) -> Result<(), Error> {
     use rand::prelude::*;
     let mut rng = StdRng::from_os_rng();
@@ -48,7 +48,7 @@ async fn pi(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// shows a user's avatar
-#[poise::command(slash_command, prefix_command, aliases("av"))]
+#[poise::command(slash_command, prefix_command, user_cooldown = 1, aliases("av"))]
 async fn avatar(
     ctx: Context<'_>,
     #[description = "user mention"] user: Option<serenity::User>,
@@ -83,7 +83,7 @@ async fn avatar(
 }
 
 /// returns with the age of the discord account
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, user_cooldown = 1)]
 async fn age(
     ctx: Context<'_>,
     #[description = "Selected user"] user: Option<serenity::User>,
@@ -107,14 +107,14 @@ async fn age(
 
 /// NOT FOR PUBLIC USE!!! well nothing is stopping you  
 /// anyways it registers guild commands
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, user_cooldown = 1)]
 async fn register(ctx: Context<'_>) -> Result<(), Error> {
     poise::builtins::register_application_commands_buttons(ctx).await?;
     Ok(())
 }
 
 /// HELP!!! well uh it also tracks edits. you can use -help `command` to get more info about a command
-#[poise::command(slash_command, track_edits, prefix_command)]
+#[poise::command(slash_command, track_edits, prefix_command, user_cooldown = 1)]
 async fn help(ctx: Context<'_>, command: Option<String>) -> Result<(), Error> {
     let config = poise::builtins::HelpConfiguration::default();
     poise::builtins::help(ctx, command.as_deref(), config).await?;
@@ -122,7 +122,7 @@ async fn help(ctx: Context<'_>, command: Option<String>) -> Result<(), Error> {
 }
 
 /// Returns the uptime of the bot
-#[poise::command(slash_command, prefix_command, aliases("up", "ut"))]
+#[poise::command(slash_command, prefix_command, user_cooldown = 1, aliases("up", "ut"))]
 async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
     let elapsed = ctx.data().start_time.elapsed();
     let hours = elapsed.as_secs() / 3600;
@@ -138,7 +138,12 @@ async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Sends an embed of the user's info.
-#[poise::command(slash_command, prefix_command, aliases("users", "u"))]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    user_cooldown = 1,
+    aliases("users", "u")
+)]
 async fn user(
     ctx: Context<'_>,
     #[description = "User mention"] user: Option<serenity::User>,
@@ -178,7 +183,7 @@ async fn user(
 }
 
 /// calls saul
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, user_cooldown = 1)]
 async fn call(ctx: Context<'_>) -> Result<(), Error> {
     ctx.reply("Calling Saul...").await?;
     sleep_until(Instant::now() + Duration::from_secs(5)).await;
@@ -187,7 +192,7 @@ async fn call(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Ping pong! not the game tho it just tells you if the bot is responsive (IN TIME)
-#[poise::command(prefix_command, slash_command, aliases("p"))]
+#[poise::command(prefix_command, user_cooldown = 1, slash_command, aliases("p"))]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     let before_timestamp = ctx.created_at();
 
@@ -216,7 +221,7 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Perform operations on an image.
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, user_cooldown = 1)]
 async fn imageop(
     ctx: Context<'_>,
     #[description = "the image to process"] img: serenity::Attachment,
@@ -261,7 +266,7 @@ async fn imageop(
 /// required by the agpl  
 /// if a fork of my bot doesn't include this pls contact me  
 /// @pastaya
-#[poise::command(prefix_command, slash_command)]
+#[poise::command(prefix_command, user_cooldown = 1, slash_command)]
 async fn source(ctx: Context<'_>) -> Result<(), Error> {
     // ehh this doesn't need error handling
     ctx.reply("https://github.com/pastadudes/cbg").await?;
@@ -269,7 +274,7 @@ async fn source(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Get a random ip address
-#[poise::command(prefix_command, slash_command)]
+#[poise::command(prefix_command, user_cooldown = 1, slash_command)]
 async fn ipv4(ctx: Context<'_>) -> Result<(), Error> {
     use rand::prelude::*;
     let mut rng = StdRng::from_os_rng();
@@ -283,7 +288,13 @@ async fn ipv4(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// shows 5 job listings from arbeitnow.com
-#[poise::command(slash_command, prefix_command, aliases("j*bs"), owners_only)]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    user_cooldown = 1,
+    aliases("j*bs"),
+    owners_only
+)]
 async fn jobs(ctx: Context<'_>) -> Result<(), Error> {
     let embed = cbg_core::jobs::JobListings::fetch()
         .await?
@@ -294,7 +305,7 @@ async fn jobs(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, user_cooldown = 1)]
 async fn invite(ctx: Context<'_>) -> Result<(), Error> {
     ctx.reply("invite me pls: https://discord.com/oauth2/authorize?client_id=734193707741347851")
         .await?;

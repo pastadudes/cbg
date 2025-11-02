@@ -31,7 +31,7 @@ async fn user(ctx: Context<'_>, username: String) -> Result<(), Error> {
 }
 
 /// Shows general activity of tetrio
-#[poise::command(slash_command, prefix_command, broadcast_typing)]
+#[poise::command(slash_command, prefix_command, broadcast_typing, user_cooldown = 1)]
 async fn activity(ctx: Context<'_>) -> Result<(), Error> {
     let attachment = TetrioActivity::fetch().await?.create_chart()?;
     ctx.send(

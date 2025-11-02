@@ -6,6 +6,7 @@ use poise::{command, serenity_prelude as serenity};
 #[command(
     prefix_command,
     slash_command,
+    user_cooldown = 1
     subcommands("user", "score", "beatmap", "rank")
 )]
 pub async fn osu(ctx: Context<'_>) -> Result<(), Error> {
@@ -13,7 +14,7 @@ pub async fn osu(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-#[command(prefix_command, slash_command, broadcast_typing)]
+#[command(prefix_command, slash_command, broadcast_typing, user_cooldown = 1)]
 async fn user(
     ctx: Context<'_>,
     #[description = "user identifier (ID or username)"] identifier: String,
@@ -85,7 +86,7 @@ async fn user(
 }
 
 // BAZINGA! almost 150 lines function
-#[command(prefix_command, slash_command, broadcast_typing)]
+#[command(prefix_command, slash_command, broadcast_typing, user_cooldown = 1)]
 async fn score(
     ctx: Context<'_>,
     #[description = "user identifier (ID or username)"] identifier: String,
@@ -237,7 +238,7 @@ async fn score(
 }
 
 /// osu: fetches beatmap info by id
-#[command(prefix_command, slash_command, broadcast_typing)]
+#[command(prefix_command, slash_command, broadcast_typing, user_cooldown = 1)]
 async fn beatmap(
     ctx: Context<'_>,
     #[description = "beatmap ID"] beatmap_id: u32,
@@ -290,7 +291,7 @@ async fn beatmap(
 }
 
 /// osu: get rank of any user (country rank too)
-#[command(prefix_command, slash_command)]
+#[command(prefix_command, slash_command, user_cooldown = 1)]
 async fn rank(
     ctx: Context<'_>,
     #[description = "user identifier (ID or username)"] identifier: String,
