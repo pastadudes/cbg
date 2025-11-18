@@ -8,14 +8,14 @@ use tetrio_api::{
 };
 use tokio::time::Instant;
 
-/// Abstraction over tetrio_api used for fetching user info.
+/// Abstraction over `tetrio_api` used for fetching user info.
 #[derive(Debug)]
 pub struct TetrioUser {
     /// nah im not explaining ts
     pub username: String,
     /// tetrio user id
     pub id: String,
-    /// tetrio user xp  
+    /// tetrio user xp\
     /// it's NOT truncated so it will be very long
     pub xp: f64,
     /// user role (`String` is temp until i stop being lazy and make an enum)
@@ -32,7 +32,7 @@ pub struct TetrioUser {
 }
 
 impl TetrioUser {
-    /// fetches user data  
+    /// fetches user data\
     /// Examples:
     /// ```
     ///  let embed = TetrioUser::fetch(&username).await?.to_embed(); // turns data into a discord embed
@@ -44,7 +44,7 @@ impl TetrioUser {
         let user_packet: Packet<UserInfo> = client
             .fetch_user_info(username)
             .await
-            .map_err(|e| format!("failed to fetch user info: {}", e))?;
+            .map_err(|e| format!("failed to fetch user info: {e}"))?;
 
         let mut user = Self::from_packet(user_packet)?;
 
@@ -64,7 +64,7 @@ impl TetrioUser {
         let packet: Packet<LeagueSummary> = client
             .fetch_user_league_summaries(user_id)
             .await
-            .map_err(|e| format!("failed to fetch league data!: {}", e))?;
+            .map_err(|e| format!("failed to fetch league data!: {e}"))?;
 
         match packet {
             Packet {
@@ -73,7 +73,7 @@ impl TetrioUser {
             Packet { error, .. } => {
                 if let Some(err) = error {
                     // Convert tetrio_api error to string
-                    Err(format!("API error!: {:?}", err).into())
+                    Err(format!("API error!: {err:?}").into())
                 } else {
                     Err("unknown error fetching league data!".into())
                 }
@@ -98,7 +98,7 @@ impl TetrioUser {
             Packet { error, .. } => {
                 if let Some(err) = error {
                     // Convert tetrio_api error to string (so it compiles)
-                    Err(format!("API error!: {:?}", err).into())
+                    Err(format!("API error!: {err:?}").into())
                 } else {
                     Err("unknown error from tetrio API!".into())
                 }
@@ -106,13 +106,13 @@ impl TetrioUser {
         }
     }
 
-    /// tetrio's special cursed formula for calculating levels...  
+    /// tetrio's special cursed formula for calculating levels...\
     /// ![the tetrio formula equation](https://latex2image-output.s3.amazonaws.com/img-Gu74frYXEMDj.png)
+    #[must_use] 
     pub fn level(&self) -> f64 {
-        let xp = self.xp;
-        let level =
-            (xp / 500.0).powf(0.6) + (xp / (5000.0 + f64::max(0.0, xp - 4000000.0) / 5000.0)) + 1.0;
-        level.trunc()
+        (self.xp / 500.0).powf(0.6)
+            + (self.xp / (5000.0 + f64::max(0.0, self.xp - 4000000.0) / 5000.0))
+            + 1.0
     }
 
     /// turns data into a discord embed
@@ -154,7 +154,7 @@ impl TetrioUser {
             let tr_display = match league.tr {
                 Some(tr_value) => {
                     if tr_value >= 0.0 {
-                        format!("{:.2}", tr_value)
+                        format!("{tr_value:.2}")
                     } else {
                         "unranked".to_string()
                     }
@@ -167,7 +167,7 @@ impl TetrioUser {
             let gxe_display = match league.gxe {
                 Some(gxe_value) => {
                     if gxe_value >= 0.0 {
-                        format!("{:.1}%", gxe_value)
+                        format!("{gxe_value:.1}%")
                     } else {
                         "???".to_string()
                     }
@@ -178,12 +178,12 @@ impl TetrioUser {
 
             // self explanatory
             if let Some(apm_value) = league.apm {
-                embed = embed.field("apm", format!("{:.1}", apm_value), true);
+                embed = embed.field("apm", format!("{apm_value:.1}"), true);
             }
 
             // you too bro
             if let Some(pps_value) = league.pps {
-                embed = embed.field("pps", format!("{:.2}", pps_value), true);
+                embed = embed.field("pps", format!("{pps_value:.2}"), true);
             }
         }
 
@@ -192,6 +192,7 @@ impl TetrioUser {
 
     // unfinished
     /// may work
+    #[must_use] 
     pub fn rank_label(&self) -> &'static str {
         match self.rank {
             Some(UserRank::XPlus) => "X+",
@@ -234,6 +235,7 @@ impl TetrioUser {
     }
 
     /// says it in the namo bro
+    #[must_use] 
     pub fn get_avatar_url(&self) -> String {
         format!(
             "https://tetr.io/user-content/avatars/{}.jpg?rv={}",
@@ -245,7 +247,7 @@ impl TetrioUser {
 
 // pub struct TetrioLeaderboard {}
 
-/// use this struct for fetching server activity  
+/// use this struct for fetching server activity\
 /// you can also use it to make a chart (KINDA similar to the one on ch.tetr.io)
 /// Examples:
 /// ```
@@ -267,8 +269,8 @@ impl TetrioUser {
 pub struct TetrioActivity {
     /// Self explanatory (probably), DO NOT MODIFY THIS!
     pub data: Vec<f64>,
-    /// you too man, DO NOT MODIFY THIS!  
-    /// this however requires std (no idea why im mentioning that, my crate can NEVER work without std)  
+    /// you too man, DO NOT MODIFY THIS!\
+    /// this however requires std (no idea why im mentioning that, my crate can NEVER work without std)\
     /// useful for cache invaildation if you like that  
     ///  
     /// why? just use moka bro please
@@ -276,7 +278,7 @@ pub struct TetrioActivity {
 }
 
 impl TetrioActivity {
-    /// obvious lol  
+    /// obvious lol\
     /// DO NOT USE `TetrioActivity::new().fetch().await?` PLEASE!
     /// # errors
     /// - errors when tetrio feels like it probably
@@ -285,7 +287,7 @@ impl TetrioActivity {
         let activity = client
             .fetch_general_activity()
             .await
-            .map_err(|e| format!("failed to fetch activity: {}", e))?;
+            .map_err(|e| format!("failed to fetch activity: {e}"))?;
 
         match activity {
             Packet {
@@ -296,7 +298,7 @@ impl TetrioActivity {
             }),
             Packet { error, .. } => {
                 if let Some(err) = error {
-                    Err(format!("API error: {:?}", err).into())
+                    Err(format!("API error: {err:?}").into())
                 } else {
                     Err("unknown error from tetrio API".into())
                 }
@@ -304,8 +306,8 @@ impl TetrioActivity {
         }
     }
 
-    /// makes a chart using plotters and returns raw bytes  
-    /// Don't forget to `?`!  
+    /// makes a chart using plotters and returns raw bytes\
+    /// Don't forget to `?`!\
     /// Example:  
     /// ```
     /// let image_bytes = TetrioActivity::fetch().await?.create_chart()?;
@@ -337,8 +339,8 @@ impl TetrioActivity {
             root.fill(&WHITE)?;
 
             let (min_val, max_val) = match (
-                self.data.iter().cloned().reduce(f64::min),
-                self.data.iter().cloned().reduce(f64::max),
+                self.data.iter().copied().reduce(f64::min),
+                self.data.iter().copied().reduce(f64::max),
             ) {
                 (Some(min), Some(max)) => (min, max),
                 _ => return Err("no self.data".into()),

@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use cbg_core::osu::OsuClient;
-use cbg_core::{AverageColor, imageops::*};
+use cbg_core::{AverageColor, imageops::{ImageOrientation, ImageProcessor}};
 use chrono::{DateTime, Utc};
 use poise::serenity_prelude as serenity;
 use std::sync::Arc;
@@ -130,8 +130,7 @@ async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
     let seconds = elapsed.as_secs() % 60;
 
     ctx.reply(format!(
-        "uptime: {:02}:{:02}:{:02}",
-        hours, minutes, seconds
+        "uptime: {hours:02}:{minutes:02}:{seconds:02}"
     ))
     .await?;
     Ok(())
@@ -407,8 +406,8 @@ async fn main() {
                 let data = Data {
                     start_time: Instant::now(),
                     osu_client: OsuClient::from_env().await?.into(),
-                    activity_message: activity_message,
-                    activity_status: activity_status,
+                    activity_message,
+                    activity_status,
                 };
 
                 let activity = match data.activity_status.as_str() {
@@ -430,6 +429,6 @@ async fn main() {
         .expect("error creating client");
 
     if let Err(why) = client.start().await {
-        eprintln!("kablam! {:?}", why);
+        eprintln!("kablam! {why:?}");
     }
 }

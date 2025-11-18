@@ -1,5 +1,5 @@
 use crate::{Context, Error};
-use cbg_core::tetrio::*;
+use cbg_core::tetrio::{TetrioUser, TetrioActivity};
 use poise::serenity_prelude as serenity;
 
 /// tetrio related commands, DO NOT USE STANDALONE!! YOU MUST SPECIFY A SUBCOMMAND!!

@@ -1,6 +1,6 @@
 use crate::{Context, Error};
 use cbg_core::AverageColor;
-use cbg_core::osu::*;
+use cbg_core::osu::{ScoreType, UserIdentifier};
 use poise::{command, serenity_prelude as serenity};
 
 #[command(
@@ -73,7 +73,7 @@ async fn user(
         .field("pp:", pp, false)
         .field(
             "global rank:",
-            format!("#{global_rank_str} ({})", rank_digits),
+            format!("#{global_rank_str} ({rank_digits})"),
             false,
         )
         .field("play count:", play_count, false)
@@ -119,7 +119,7 @@ async fn score(
 
     for (i, score) in scores.iter().enumerate() {
         let beatmap_info = if let Some(beatmap_id) = score.beatmap_id {
-            format!("beatmap id: {} (fetching details...)", beatmap_id)
+            format!("beatmap id: {beatmap_id} (fetching details...)")
         } else {
             "unknown beatmap!".to_string()
         };
@@ -131,9 +131,7 @@ async fn score(
             .field("score", format!("{:?}", score.score), false)
             .field(
                 "pp",
-                score
-                    .pp
-                    .map_or("???".to_string(), |pp| format!("{:.2}", pp)),
+                score.pp.map_or("???".to_string(), |pp| format!("{pp:.2}")),
                 false,
             )
             .field("accuracy", format!("{:.2}%", score.accuracy), false)
@@ -184,7 +182,7 @@ async fn score(
                     )
                 }
                 Err(_) => {
-                    format!("beatmap id: {} (failed to fetch)", beatmap_id)
+                    format!("beatmap id: {beatmap_id} (failed to fetch)")
                 }
             }
         } else {
@@ -198,9 +196,7 @@ async fn score(
             .field("score", format!("{:?}", score.score), false)
             .field(
                 "pp",
-                score
-                    .pp
-                    .map_or("???".to_string(), |pp| format!("{:.2}", pp)),
+                score.pp.map_or("???".to_string(), |pp| format!("{pp:.2}")),
                 false,
             )
             .field("accuracy", format!("{:.2}%", score.accuracy), false)

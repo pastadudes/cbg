@@ -1,5 +1,5 @@
 //! # osu
-//! osu stuff is in here  
+//! osu stuff is in here\
 //! embask in the glorious ~400 lines of code i've written
 //!
 //! you
@@ -291,7 +291,7 @@ impl OsuClient {
         let uid = match &user {
             UserIdentifier::Id(id) => *id,
             UserIdentifier::Username(name) => {
-                self.get_user(UserIdentifier::Username(name.to_string()))
+                self.get_user(UserIdentifier::Username(name.clone()))
                     .await?
                     .id
             }

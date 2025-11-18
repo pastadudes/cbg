@@ -19,10 +19,12 @@ pub struct AverageColor {
 }
 impl AverageColor {
     #[cfg(feature = "discord")]
+    #[must_use] 
     pub fn to_embed_color(&self) -> serenity::all::Color {
         serenity::all::Color::from_rgb(self.red, self.green, self.blue)
     }
 
+    #[must_use] 
     pub fn new(red: u8, green: u8, blue: u8) -> Self {
         Self { red, green, blue }
     }
@@ -41,14 +43,14 @@ impl AverageColor {
         for x in 0..width {
             for y in 0..height {
                 let pixel = image.get_pixel(x, y).0; // Get pixel (R, G, B, A)
-                red += pixel[0] as u64;
-                green += pixel[1] as u64;
-                blue += pixel[2] as u64;
+                red += u64::from(pixel[0]);
+                green += u64::from(pixel[1]);
+                blue += u64::from(pixel[2]);
             }
         }
 
         // calculate the average
-        let num_pixels = (width * height) as u64;
+        let num_pixels = u64::from(width * height);
         red /= num_pixels;
         green /= num_pixels;
         blue /= num_pixels;
@@ -68,14 +70,14 @@ impl AverageColor {
         for x in 0..width {
             for y in 0..height {
                 let pixel = image.get_pixel(x, y).0; // get pixel (R, G, B, A)
-                red += pixel[0] as u64;
-                green += pixel[1] as u64;
-                blue += pixel[2] as u64;
+                red += u64::from(pixel[0]);
+                green += u64::from(pixel[1]);
+                blue += u64::from(pixel[2]);
             }
         }
 
         // calculate the average
-        let num_pixels = (width * height) as u64;
+        let num_pixels = u64::from(width * height);
         red /= num_pixels;
         green /= num_pixels;
         blue /= num_pixels;

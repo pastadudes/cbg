@@ -28,7 +28,7 @@ pub fn get_random_ipv4(rng: &mut impl Rng) -> String {
     let octet3: u8 = rng.random_range(0..=255);
     let octet4: u8 = rng.random_range(0..=255);
 
-    format!("{}.{}.{}.{}", octet1, octet2, octet3, octet4)
+    format!("{octet1}.{octet2}.{octet3}.{octet4}")
 }
 
 #[cfg(test)]

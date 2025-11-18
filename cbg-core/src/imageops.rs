@@ -19,10 +19,12 @@ pub struct ImageOperations {
 }
 
 impl ImageOperations {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use] 
     pub fn is_identity(&self) -> bool {
         self.blur.is_none() && self.orientation.is_none() && !self.grayscale
     }
@@ -56,6 +58,7 @@ pub struct ImageProcessor {
 }
 
 impl ImageProcessor {
+    #[must_use] 
     pub fn new(url: String) -> Self {
         Self {
             url,
@@ -63,7 +66,8 @@ impl ImageProcessor {
         }
     }
 
-    /// Blurs an image using imageops' fast_blur method
+    /// Blurs an image using imageops' `fast_blur` method
+    #[must_use] 
     pub fn blur(mut self, blur: Option<f32>) -> Self {
         if let Some(amount) = blur {
             self.operations.blur = Some(amount);
@@ -72,6 +76,7 @@ impl ImageProcessor {
     }
 
     /// Flips an image
+    #[must_use] 
     pub fn flip(mut self, orientation: Option<ImageOrientation>) -> Self {
         if let Some(orient) = orientation {
             self.operations.orientation = Some(orient);
@@ -80,6 +85,7 @@ impl ImageProcessor {
     }
 
     /// Self explainatory
+    #[must_use] 
     pub fn grayscale(mut self, grayscale: Option<bool>) -> Self {
         if grayscale.is_some_and(|g| g) {
             self.operations.grayscale = true;
@@ -88,7 +94,7 @@ impl ImageProcessor {
     }
 
     /// Call to process the image
-    /// Returns raw bytes (in `Vec<u8>`)  
+    /// Returns raw bytes (in `Vec<u8>`)\
     /// Like this:  
     /// ```
     ///    let result = ImageProcessor::new(url)

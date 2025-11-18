@@ -75,6 +75,7 @@ impl JobListings {
         })
     }
 
+    #[must_use] 
     pub fn take(self, count: usize) -> Self {
         Self {
             jobs: self.jobs.into_iter().take(count).collect(),
