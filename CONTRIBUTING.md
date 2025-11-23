@@ -16,9 +16,9 @@ use poise::serenity_prelude as serenity; and in cbg-core (you SHOULD still use f
 
 ## imports: 
 
-- keep em' minimal (see style): 
+- keep it simple, stupid
 
-- group all imoorts from a crate in ONE use statement (in the future I'll make rustfmt.toml)
+- group all imports from a crate in ONE use statement (in the future I'll make rustfmt.toml)
 
 - if something’s only used inside a function, `use` it inside the function (if used in 2 functions it's ok) 
 
@@ -41,7 +41,7 @@ use user, not u
 
 use stats, not s
 
-### exceptions: img or id, (mostly) super-common abbreviations
+### exceptions: img, ctx or id and (mostly) super-common abbreviations like i
 
 - no single-letter names, even in closures
 
